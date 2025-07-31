@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Inception",
+    "image": "posters/inception.jpg",
+    "note": "Watch again!",
+    "watched": true
+  },
+  {
+    "title": "Avengers End Game",
+    "image": "posters/endgame.jpg",
+    "note": "Hats Off To Iron Man!!",
+    "watched": true
+  },
+  {
+    "title": "The Legend Of Hanuman",
+    "image": "posters/legend of hanuman.jpg",
+    "note": "Series Of Story Related To Lord Hanuman",
+    "watched": true
+  }
+]
