@@ -1,11 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-from tkinter import filedialog
 from PIL import Image, ImageTk
 import json, os
 
 FILE = "movies.json"
-POSTER_FOLDER = "posters"
 
 # Load data
 def load_movies():
@@ -17,41 +15,25 @@ def load_movies():
 # Save data
 def save_movies():
     with open(FILE, "w") as f:
-        json.dump(movies, f, indent=2)
+        json.dump(movies, f)
 
 # Add movie
 def add_movie():
     title = title_var.get().strip()
     note = note_var.get().strip()
-    image_path = image_path_var.get().strip()
+    poster = poster_var.get().strip()
 
-    if not title:
-        messagebox.showwarning("Input", "Enter movie title.")
-        return
+    if title and poster:
+        movies.append({"title": title, "note": note, "poster": poster, "watched": False})
+        save_movies()
+        update_list()
+        title_var.set("")
+        note_var.set("")
+        poster_var.set("")
+    else:
+        messagebox.showwarning("Input", "Enter movie title and poster path.")
 
-    if not image_path or not os.path.exists(image_path):
-        messagebox.showwarning("Image", "Enter valid image path.")
-        return
-
-    if any(m["title"].lower() == title.lower() for m in movies):
-        messagebox.showwarning("Duplicate", "Movie already in the list.")
-        return
-
-    image_filename = os.path.basename(image_path)
-    saved_path = os.path.join(POSTER_FOLDER, image_filename)
-    os.makedirs(POSTER_FOLDER, exist_ok=True)
-    with open(image_path, 'rb') as src, open(saved_path, 'wb') as dst:
-        dst.write(src.read())
-
-    movies.append({"title": title, "note": note, "watched": False, "image": saved_path})
-    save_movies()
-    update_list()
-    title_var.set("")
-    note_var.set("")
-    image_path_var.set("")
-
-# Delete selected
-
+# Delete movie
 def delete_movie():
     selected = tree.selection()
     if selected:
@@ -63,7 +45,6 @@ def delete_movie():
         messagebox.showwarning("Select", "Select movie to delete.")
 
 # Mark as watched
-
 def mark_watched():
     selected = tree.selection()
     if selected:
@@ -74,111 +55,61 @@ def mark_watched():
     else:
         messagebox.showwarning("Select", "Select movie to mark as watched.")
 
-# Update Treeview and Poster
+# Show poster
+def show_poster(event):
+    selected = tree.selection()
+    if selected:
+        index = int(selected[0])
+        poster_path = movies[index].get("poster", "")
+        if os.path.exists(poster_path):
+            img = Image.open(poster_path)
+            img = img.resize((200, 300))
+            img = ImageTk.PhotoImage(img)
+            poster_label.config(image=img)
+            poster_label.image = img
+        else:
+            poster_label.config(image="", text="Poster not found.")
 
+# Update treeview
 def update_list():
     tree.delete(*tree.get_children())
     for i, m in enumerate(movies):
         status = "✅" if m["watched"] else "❌"
         tree.insert("", "end", iid=i, values=(m["title"], m["note"], status))
 
-    # Reset poster
-    poster_label.config(image="")
-
-# Show poster when selecting a movie
-
-def on_tree_select(event):
-    selected = tree.selection()
-    if selected:
-        index = int(selected[0])
-        img_path = movies[index].get("image")
-        if img_path and os.path.exists(img_path):
-            img = Image.open(img_path)
-            img.thumbnail((200, 300))
-            photo = ImageTk.PhotoImage(img)
-            poster_label.image = photo
-            poster_label.config(image=photo)
-
-# Add recommended movie
-
-def add_recommended(title):
-    for rec in recommended_movies:
-        if rec["title"] == title:
-            if any(m["title"].lower() == title.lower() for m in movies):
-                messagebox.showinfo("Already Added", f"{title} already in your watchlist.")
-                return
-            movies.append({
-                "title": rec["title"],
-                "note": rec["note"],
-                "watched": False,
-                "image": rec["image"]
-            })
-            save_movies()
-            update_list()
-            messagebox.showinfo("Added", f"{title} added to your watchlist!")
-            break
-
-# Recommended movies list
-recommended_movies = [
-    {"title": "The Dark Knight", "note": "Legendary Joker!", "image": "posters/dark_knight.jpg"},
-    {"title": "Interstellar", "note": "Time is relative", "image": "posters/interstellar.jpg"},
-    {"title": "The Matrix", "note": "Neo rocks", "image": "posters/matrix.jpg"},
-    {"title": "3 Idiots", "note": "All is well!", "image": "posters/3idiots.jpg"},
-    {"title": "Dangal", "note": "Women power", "image": "posters/dangal.jpg"},
-]
-
-# GUI setup
+# GUI Setup
 root = tk.Tk()
-root.title("Mihir's Movie Watchlist")
-root.geometry("800x600")
+root.title("🎬 Mihir's Movie Watchlist")
+root.geometry("700x550")
 
-main_frame = tk.Frame(root)
-main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-# Left side: Add Movie + Recommended
-left_frame = tk.Frame(main_frame)
-left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
-
-tk.Label(left_frame, text="Movie Title:").pack()
 title_var = tk.StringVar()
-tk.Entry(left_frame, textvariable=title_var, width=30).pack()
-
-tk.Label(left_frame, text="Note (Optional):").pack()
 note_var = tk.StringVar()
-tk.Entry(left_frame, textvariable=note_var, width=30).pack()
+poster_var = tk.StringVar()
+movies = load_movies()
 
-tk.Label(left_frame, text="Poster Path:").pack()
-image_path_var = tk.StringVar()
-tk.Entry(left_frame, textvariable=image_path_var, width=30).pack()
+tk.Label(root, text="Movie Title:").pack()
+tk.Entry(root, textvariable=title_var, width=50).pack()
 
-tk.Button(left_frame, text="Add Movie", command=add_movie).pack(pady=5)
-tk.Button(left_frame, text="Mark as Watched", command=mark_watched).pack(pady=2)
-tk.Button(left_frame, text="Delete Movie", command=delete_movie).pack(pady=2)
+tk.Label(root, text="Note (Optional):").pack()
+tk.Entry(root, textvariable=note_var, width=50).pack()
 
-# Recommended Movie Frame
-rec_frame = tk.LabelFrame(left_frame, text="🎥 Recommended Movies", padx=5, pady=5)
-rec_frame.pack(fill=tk.BOTH, pady=10)
+tk.Label(root, text="Poster Path (.jpg/.png):").pack()
+tk.Entry(root, textvariable=poster_var, width=50).pack(pady=5)
 
-for rec in recommended_movies:
-    btn = tk.Button(rec_frame, text=rec["title"], width=25,
-                    command=lambda t=rec["title"]: add_recommended(t))
-    btn.pack(pady=1)
+tk.Button(root, text="Add Movie", command=add_movie).pack(pady=5)
 
-# Right side: Movie List and Poster
-right_frame = tk.Frame(main_frame)
-right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-tree = ttk.Treeview(right_frame, columns=("Title", "Note", "Watched"), show="headings")
+tree = ttk.Treeview(root, columns=("Title", "Note", "Watched"), show="headings")
 tree.heading("Title", text="Title")
 tree.heading("Note", text="Note")
 tree.heading("Watched", text="Watched")
-tree.pack(fill=tk.BOTH, expand=True)
-tree.bind("<<TreeviewSelect>>", on_tree_select)
+tree.bind("<<TreeviewSelect>>", show_poster)
+tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-poster_label = tk.Label(right_frame)
+tk.Button(root, text="Mark as Watched", command=mark_watched).pack(pady=2)
+tk.Button(root, text="Delete Movie", command=delete_movie).pack(pady=2)
+
+poster_label = tk.Label(root)
 poster_label.pack(pady=10)
 
-movies = load_movies()
 update_list()
-
 root.mainloop()
